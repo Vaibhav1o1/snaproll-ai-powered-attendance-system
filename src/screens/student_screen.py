@@ -61,14 +61,14 @@ def student_dashboard():
     stats_map = {}
 
     for log in logs:
-        sid = logs['subject_id']
+        sid = log['subject_id']
 
         if sid not in stats_map:
-            stats_map['sid'] = {'total': 0, 'attended': 0}
+            stats_map[sid] = {'total': 0, 'attended': 0}
 
         stats_map[sid]['total'] += 1
 
-        if logs.get('is_present'):
+        if log.get('is_present'):
             stats_map[sid]['attended'] += 1
 
 
@@ -83,7 +83,7 @@ def student_dashboard():
         stats = stats_map.get(sid, {'total': 0, 'attended': 0})
 
         def unenroll_btn():
-            if st.button("Unenroll from this coarse", type='tertiary', width="stretch", icon=':material/delete_forever:'):
+            if st.button("Unenroll from this coarse", type='tertiary', width="stretch", icon=':material/delete_forever:', key=sid):
                 unenroll_student_to_subject(student_id, sid)
                 st.toast(f"Unenrolled from {sub['name']} Successfully!")
                 st.rerun()
@@ -180,7 +180,7 @@ def student_screen():
 
             audio_data = None
             try:
-                st.audio_input("Record a short phrase like I am present, My name is Roshan")
+                audio_data = st.audio_input("Record a short phrase like I am present, My name is Roshan")
             except Exception as e:
                 st.error("Audio Data Failed!")
 

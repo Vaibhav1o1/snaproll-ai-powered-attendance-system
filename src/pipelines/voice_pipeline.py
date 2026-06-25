@@ -35,7 +35,7 @@ def identify_speaker(new_embedding, candidates_dict, threshold=0.65):
     best_sid = None
     best_score = -1.0
 
-    for sid, stored_embedding in candidates_dict.item():
+    for sid, stored_embedding in candidates_dict.items():
         if stored_embedding:
             similarity = np.dot(new_embedding, stored_embedding)
 
@@ -61,7 +61,7 @@ def process_bulk_voice(audio_bytes, candidates_dict, threshold=0.65):
 
         for start, end in segments:
 
-            if(end - start) < 0.5:
+            if(end - start) < (0.5 * sr):
                 continue
 
             segment_audio = audio[start:end]
