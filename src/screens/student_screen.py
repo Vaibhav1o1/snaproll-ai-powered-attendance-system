@@ -175,8 +175,8 @@ def student_screen():
 
             new_name = st.text_input("Enter your name", placeholder="E.g. Vaibhav Gupta")
 
-            st.subheader('Optional : Voice Enrollment')
-            st.info("Enroll for voice only attendance")
+            st.subheader('Voice Enrollment (Required)')
+            st.info("Please record your voice. Both face & voice are required to create your account.")
 
             audio_data = None
             try:
@@ -193,9 +193,15 @@ def student_screen():
                         if encodings:
                             face_emb = encodings[0].tolist()
 
-                            voice_emb = None
-                            if audio_data:
-                                voice_emb = get_voice_embedding(audio_data.read())
+                            if not audio_data:
+                                st.warning("Please record your voice.")
+                                st.stop()
+
+                            voice_emb = get_voice_embedding(audio_data.read())
+
+                            if voice_emb is None:
+                                st.error("Could not process your voice. Please record again.")
+                                st.stop()
 
                             response_data = create_student(new_name, face_embedding=face_emb, voice_embedding=voice_emb)
 
