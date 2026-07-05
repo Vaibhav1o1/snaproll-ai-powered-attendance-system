@@ -9,7 +9,7 @@ from src.components.footer import footer_dashboard
 from PIL import Image
 import numpy as np
 
-from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings, train_classifier
+from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings, train_classifier, load_dlib_models, is_face_quality_ok
 from src.pipelines.voice_pipeline import get_voice_embedding
 
 from src.database.db import get_all_students, create_student, get_student_subjects, get_student_attendance, unenroll_student_to_subject
@@ -175,6 +175,45 @@ def student_screen():
 
             new_name = st.text_input("Enter your name", placeholder="E.g. Vaibhav Gupta")
 
+            st.subheader('Face Enrollment: capture 5 photos')
+            st.caption('Vary your angle slightly each time — straight, left, right, up, down.')
+
+            SHOTS_NEEDED = 5
+            captured_embeddings = st.session_state.get('reg_embeddings', [])
+
+            st.progress(len(captured_embeddings) / SHOTS_NEEDED)
+            st.write(f"{len(captured_embeddings)}/{SHOTS_NEEDED} photos captured")
+
+
+            if len(captured_embeddings) < SHOTS_NEEDED:
+                reg_photo = st.camera_input(f"Capture photo {len(captured_embeddings)+1}",key=f"reg_cam_{len(captured_embeddings)}")
+
+                if reg_photo:
+                    img = np.array(Image.open(reg_photo))
+                    detector, sp, facerec = load_dlib_models()
+                    faces = detector(img, 1)
+
+                    if len(faces) == 0:
+                        st.warning('No face detected, try again.')
+                    elif len(faces) > 1:
+                        st.warning('Multiple faces detected, make sure only you are in frame.')
+                    else:
+                        ok, msg = is_face_quality_ok(img, faces[0])
+                        if not ok:
+                            st.warning(msg)
+                        else:
+                            encodings = get_face_embeddings(img)
+                            if encodings:
+                                captured_embeddings.append(encodings[0].tolist())
+                                st.session_state.reg_embeddings = captured_embeddings
+                                st.rerun()
+                            else:
+                                st.warning('Could not extract face features, try again.')
+
+            else:
+                st.success('All 5 Photos Captured!')
+
+
             st.subheader('Voice Enrollment (Required)')
             st.info("Please record your voice. Both face & voice are required to create your account.")
 
@@ -184,49 +223,37 @@ def student_screen():
             except Exception as e:
                 st.error("Audio Data Failed!")
 
-            if st.button("Create Account", type="primary"):
-                if new_name:
+            if st.button("Create Account", type="primary", disabled=len(captured_embeddings) < SHOTS_NEEDED):
+                if not new_name:
+                    st.warning("Please enter your name!")
+                
+                elif not audio_data:
+                    st.warning("Please record your voice.")
+                
+                else:
                     with st.spinner('Creating Profile...'):
-                        img = np.array(Image.open(photo_source))
-                        encodings = get_face_embeddings(img)
-
-                        if encodings:
-                            face_emb = encodings[0].tolist()
-
-                            if not audio_data:
-                                st.warning("Please record your voice.")
-                                st.stop()
 
                             voice_emb = get_voice_embedding(audio_data.read())
 
                             if voice_emb is None:
                                 st.error("Could not process your voice. Please record again.")
-                                st.stop()
-
-                            response_data = create_student(new_name, face_embedding=face_emb, voice_embedding=voice_emb)
-
-                            if response_data:
-                                train_classifier()
-
-                                st.session_state.is_logged_in = True
-                                st.session_state.user_role = 'student'
-                                st.session_state.student_data = response_data[0]
-
-                                st.toast(f"Profile Created! Hi {new_name}!")
-                                time.sleep(1)
-
-                                st.rerun()
-
+                            
                             else:
-                                st.error("Could not capture your facial features for registration")
+                                response_data = create_student(new_name, face_embedding=captured_embeddings, voice_embedding=voice_emb)
 
-                else:
-                    st.warning("Please enter yout name!")
+                                if response_data:
+                                    del st.session_state['reg_embeddings']
 
-            
+                                    train_classifier()
 
+                                    st.session_state.is_logged_in = True
+                                    st.session_state.user_role = 'student'
+                                    st.session_state.student_data = response_data[0]
 
-                    
+                                    st.toast(f"Profile Created! Hi {new_name}!")
+                                    time.sleep(1)
+
+                                    st.rerun()
 
 
 

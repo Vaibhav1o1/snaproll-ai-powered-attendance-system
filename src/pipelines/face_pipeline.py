@@ -1,9 +1,9 @@
 import streamlit as st
 
 import dlib
+import cv2
 import numpy as np
 import face_recognition_models
-from sklearn.svm import SVC
 
 from src.database.db import get_all_students
 
@@ -33,7 +33,7 @@ def get_face_embeddings(image_np):
 
     for face in faces:
         shape = sp(image_np, face)
-        face_descriptor = facerec.compute_face_descriptor(image_np, shape, 1) # 128 Embeddings
+        face_descriptor = facerec.compute_face_descriptor(image_np, shape, 5) # 128 Embeddings
 
         encodings.append(np.array(face_descriptor))
 
@@ -41,41 +41,34 @@ def get_face_embeddings(image_np):
 
 
 @st.cache_resource
-def get_trained_model():
-    X = []
-    y = []
-
+def get_face_gallery():
     student_db = get_all_students()
 
     if not student_db:
         return None
     
+    gallery = []
+
     for student in student_db:
-        embedding = student.get('face_embedding')
+        embs = student.get('face_embedding')
 
-        if embedding:
-            X.append(np.array(embedding))
-            y.append(student.get('student_id'))
+        if not embs:
+            continue
 
-    if len(X) == 0:
-        return 0
+        if isinstance(embs[0], (int, float)):
+            embs = [embs]
 
-    clf = SVC(kernel='linear', probability=True, class_weight='balanced')
+        for e in embs:
+            gallery.append((student['student_id'], np.array(e)))
 
-    try:
-        clf.fit(X, y)
-    except ValueError:
-        pass
-
-    return {'clf': clf, 'X': X, 'y': y}
-
+    return gallery or None
 
 
 def train_classifier():
     st.cache_resource.clear()
 
-    model_data = get_trained_model()
-    return bool(model_data)
+    gallery = get_face_gallery()
+    return bool(gallery)
 
 
 
@@ -84,34 +77,42 @@ def predict_attendance(class_image_np):
 
     detected_students = {}
 
-    model_data = get_trained_model()
+    gallery = get_face_gallery()
 
-    if not model_data: # Present_Students, All_Students, No_of_Present_Students
+    if not gallery: # Present_Students, All_Students, No_of_Present_Students
         return detected_students, [], len(encodings) 
     
-    clf = model_data['clf']
-    X_train = model_data['X']
-    y_train = model_data['y']
-
-    all_students = sorted(list(set(y_train)))
+    all_students = sorted(set(sid for sid, _ in gallery))
+    resemblance_threshold = 0.45
 
     for encoding in encodings:
-        if len(all_students) >= 2:
-            predicted_id = int(clf.predict([encoding])[0])
+        best_sid, best_dist = None, float('inf')
 
-        else:
-            predicted_id = int(all_students[0])
+        for sid, emb in gallery:
+            dist = np.linalg.norm(emb - encoding)
 
-        student_embedding = X_train[y_train.index(predicted_id)]
+            if dist < best_dist:
+                best_dist, best_sid = dist, sid
 
-        best_match_score = np.linalg.norm(student_embedding - encoding)
-
-        resemblance_threshold = 0.6
-
-        if best_match_score <= resemblance_threshold:
-            detected_students[predicted_id] = True
+        if best_sid is not None and best_dist <= resemblance_threshold:
+            detected_students[best_sid] = True
 
     return detected_students, all_students, len(encodings)
+
+
+
+def is_face_quality_ok(image_np, face_rect):
+    gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+    blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if blur_score < 50:
+        return False, "Image too blurry, hold steady."
+
+    face_area = face_rect.width() * face_rect.height()
+    image_area = image_np.shape[0] * image_np.shape[1]
+    if face_area / image_area < 0.03:
+        return False, "Move closer to the camera."
+
+    return True, None
     
 
 
