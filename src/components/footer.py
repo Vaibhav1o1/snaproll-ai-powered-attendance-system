@@ -8,7 +8,7 @@ def footer_home():
 
             <div style="margin-top: 2rem; display: flex; gap: 6px; justify-content: center; items-align: center;">
 
-            <p style="font-weight: bold; color: white;"> Created by VAIBHAV </p>
+            <p style="font-weight: bold; color: white;"> © 2026 SnapRoll AI • Built for Educators </p>
 
             </div>
                 
@@ -24,7 +24,7 @@ def footer_dashboard():
 
             <div style="margin-top: 2rem; display: flex; gap: 6px; justify-content: center; items-align: center;">
 
-            <p style="font-weight: bold; color: black;"> Created by VAIBHAV </p>
+            <p style="font-weight: bold; color: black;"> © 2026 SnapRoll AI • Built for Educators </p>
 
             </div>
                 
