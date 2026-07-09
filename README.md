@@ -107,14 +107,14 @@ SnapRoll turns attendance into a **single photo or audio clip**, verified by AI:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     STREAMLIT APPLICATION                    │
-│         (Home Screen → Teacher Screen / Student Screen)      │
-│      camera_input · audio_input · session_state routing      │
-└───────────────────────┬───────────────────────────────────────┘
+│                     STREAMLIT APPLICATION                   │
+│         (Home Screen → Teacher Screen / Student Screen)     │
+│      camera_input · audio_input · session_state routing     │
+└───────────────────────┬──────────────────────────────────────
                         │
                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       AI PIPELINE LAYER                      │
+┌────────────────────────────────────────────────────────────────
+│                       AI PIPELINE LAYER                       │
 │                                                               │
 │   Face Pipeline                    Voice Pipeline             │
 │   dlib detector + shape predictor  librosa segmentation       │
@@ -124,10 +124,10 @@ SnapRoll turns attendance into a **single photo or audio clip**, verified by AI:
                         │ Supabase Client
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                        DATA LAYER                            │
-│                  Supabase (PostgreSQL)                       │
-│   teachers · students · subjects · subject_students ·        │
-│   attendance                                                  │
+│                        DATA LAYER                           │
+│                  Supabase (PostgreSQL)                      │
+│   teachers · students · subjects · subject_students ·       │
+│   attendance                                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
