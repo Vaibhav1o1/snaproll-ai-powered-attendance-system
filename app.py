@@ -13,6 +13,10 @@ def main():
         page_icon="assets/SnapRoll_Logo.ico"
     )
 
+    if st.query_params.get("theme") != "light":
+        st.query_params["theme"] = "light"
+        st.rerun()
+
     if 'login_type' not in st.session_state:
         st.session_state['login_type'] = None
 
